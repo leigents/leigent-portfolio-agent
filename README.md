@@ -1,169 +1,170 @@
 # Leigent — Autonomous DeFi Portfolio Agent on X Layer
 
-> Natural language-driven AI agent for intelligent DeFi portfolio management on X Layer.
+> Natural language-driven AI agent for intelligent DeFi portfolio management on X Layer. Built for the **OKX Build X Hackathon** — X Layer Arena.
 
-## What It Does
+## 🎯 What It Does
 
-**Leigent** is an autonomous portfolio manager that:
-
-1. **Understands your financial goals** in plain English — "I want stable income", "grow my portfolio", "keep it safe"
-2. **Monitors your X Layer positions** via OnchainOS APIs (wallet balance, DeFi positions, token prices)
-3. **Executes intelligent swaps** on X Layer DEX using OnchainOS DEX aggregator (500+ liquidity sources)
-4. **Auto-rebalances** when allocations drift beyond thresholds
-5. **Reports back** with clear explanations of what it did and why
-
-## Architecture
+**Leigent** is an autonomous portfolio manager that speaks plain English:
 
 ```
-User: "I want stable income"
+You: "I want stable income"
+Leigent: → Analyzes your current holdings
+      → Recommends 50% USDC / 30% USDT / 20% OKB strategy (~3-8% APY)
+      → Executes corrective swaps on X Layer DEX
+      → Reports: "Swapped 0.5 ETH → 200 USDC. TxHash: 0xabc..."
+
+You: "What's my portfolio worth?"
+Leigent: → Fetches all wallet balances + DeFi positions
+      → Shows: $1,234.56 total across USDC, OKB, USDT
+      → Notes any staking rewards accruing
+
+You: "Swap 10 USDC to OKB"
+Leigent: → Gets best route via OnchainOS DEX aggregator (500+ sources)
+      → Executes swap, reports tx hash + price impact
+```
+
+## 🏆 Hackathon Alignment
+
+### X Layer Arena Scoring — How Leigent Scores
+
+| Dimension | Weight | Leigent's Approach |
+|-----------|--------|-------------------|
+| **OnchainOS/Uniswap Integration** | 25% | ✅ swap quote/execute, wallet balance, defi positions, token search, **x402 payment**, **OKB staking** |
+| **X Layer Ecosystem Fit** | 25% | ✅ OKB native gas, **x402 metered payments**, **OKB validator staking** (~5-10% APY), near-zero gas fees |
+| **AI Interaction Experience** | 25% | ✅ **Multi-round conversation memory**, preference learning, natural language strategy matching, autonomous rebalancing |
+| **Product Completeness** | 25% | ✅ Full end-to-end flows, real swap execution, tx reporting, autonomous monitoring loop |
+
+### Special Prizes Leigent Targets
+- 🏅 **Most Active On-Chain Agent** (400 USDT) — autonomous tx execution with tx counter
+- 🏅 **Most Popular Repo** — active Moltbook + X engagement
+
+## ✨ Features
+
+### Natural Language Commands
+| Command | What Happens |
+|---------|-------------|
+| `"What's my portfolio worth?"` | Fetches wallet balances + DeFi positions |
+| `"I want stable income"` | Recommends USDC/USDT/OKB yield strategy |
+| `"Swap 10 USDC to OKB"` | Executes best-route DEX swap |
+| `"Rebalance to 60% OKB"` | Auto-corrects allocation drift |
+| `"Stake my OKB"` | Shows OKB staking yield (~5-10% APY) |
+| `"Pay for [API URL] via x402"` | Executes x402 HTTP 402 payment |
+| `"I prefer low risk"` | Learns and adapts future recommendations |
+
+### OnchainOS Integration
+- **`swap quote` + `swap execute`** — DEX aggregation, 500+ liquidity sources, best-route routing
+- **`wallet balance`** — token balance monitoring
+- **`defi positions`** — cross-protocol DeFi position tracking
+- **`token search`** — token address resolution
+- **`security token-scan`** — pre-swap token safety verification
+- **`staking`** — OKB validator staking (~5-10% APY)
+- **`payment x402`** — metered API payments via HTTP 402
+
+### X Layer Native Features
+- **OKB** — Native gas token (~$0.0005/tx, 1s block time)
+- **x402** — Metered payment protocol for API access
+- **OKB Staking** — Validator rewards ~5-10% APY
+- **DEX Aggregation** — CurveNG, QuickSwap V3, OkieStableSwap routing
+
+### Autonomous Modes
+- **Auto-rebalance**: Monitors every 5 min, corrects >5% drift
+- **Transaction counter**: Tracks on-chain activity for "Most Active Agent" prize
+- **Preference learning**: Remembers risk tolerance across sessions
+
+## 🏗 Architecture
+
+```
+User input (plain English)
          │
          ▼
-┌─────────────────────┐
-│   Agent Brain        │ ← NL intent classification + strategy matching
-│  (agent-brain.js)    │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  Portfolio Manager   │ ← Rebalancing logic + swap orchestration
-│ (portfolio-manager.js)│
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  OnchainOS Client    │ ← CLI wrapper (DEX, Wallet, Portfolio APIs)
-│ (onchainos-client.js)│
-└─────────┬───────────┘
-          │
-          ▼
-    OnchainOS APIs → X Layer DEX → On-chain execution
+┌──────────────────────┐
+│   Agent Brain         │ ← Intent classification + strategy engine
+│  agent-brain.js       │   Multi-round memory, preference learning
+│                       │   x402 + OKB staking awareness
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Portfolio Manager    │ ← Strategy execution + swap orchestration
+│ portfolio-manager.js │   Rebalancing, staking, x402 payments
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  OnchainOS Client    │ ← CLI wrapper for all OnchainOS APIs
+│ onchainos-client.js  │
+└──────────┬───────────┘
+           │
+           ▼
+    OnchainOS APIs → X Layer → On-chain execution
 ```
 
-## Key Features
-
-### Natural Language Interface
-- `What's my portfolio worth?` → Shows current balances + DeFi positions
-- `I want stable income` → Recommends yield strategy with expected APY
-- `Swap 10 USDC to OKB` → Executes best-route swap via X Layer DEX
-- `Rebalance to 60% OKB, 40% USDC` → Auto-adjusts allocations
-
-### OnchainOS + Uniswap Integration
-- **DEX Aggregator**: Routes through 500+ sources, finds best price
-- **Agentic Wallet**: All transactions signed via OKX Agentic Wallet
-- **Portfolio API**: Tracks cross-protocol DeFi positions
-- **Security scanning**: Token safety + contract verification
-
-### Auto-Rebalancing
-- Monitors allocation drift every 5 minutes
-- Auto-corrects when any asset drifts >5% from target
-- Reports all actions to user
-
-## Tech Stack
-
-- **Runtime**: Node.js 18+
-- **OnchainOS CLI**: `~/.local/bin/onchainos` ( DEX swap, wallet, portfolio)
-- **X Layer**: EVM L2, ~$0.0005/tx, 1s block time
-- **Skills**: OpenClaw skill system (`.agents/skills/okx-portfolio-agent/`)
-
-## Quick Start
-
-### Prerequisites
-- Node.js 18+
-- OnchainOS CLI installed (`curl -fsSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh`)
-- X Layer wallet with funds
-- OnchainOS API credentials in `~/.config/onchainos.env`
-
-### Install
-
-```bash
-git clone https://github.com/YOUR_GITHUB/leigent-portfolio-agent.git
-cd leigent-portfolio-agent
-npm install
-```
-
-### Configure
-
-```bash
-# Set your wallet address
-export WALLET_ADDRESS=0xYourXLayerAddress
-
-# Verify onchainos CLI works
-onchainos wallet status
-```
-
-### Run
-
-```bash
-# Interactive chat mode
-node src/index.js
-
-# Or require it as a module
-const { LeigentPortfolioAgent } = require('./src/index');
-const agent = new LeigentPortfolioAgent('0xYourAddress');
-await agent.chat('What is my portfolio worth?');
-```
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 leigent-portfolio-agent/
 ├── src/
-│   ├── index.js              # Main agent entry point
-│   ├── agent-brain.js        # NL understanding + strategy engine
-│   ├── portfolio-manager.js  # Position management + rebalancing
-│   └── onchainos-client.js   # OnchainOS CLI wrapper
+│   ├── index.js              # Main agent + autonomous loop
+│   ├── agent-brain.js        # NL understanding, strategies, memory
+│   ├── portfolio-manager.js  # Positions, swaps, staking, x402
+│   └── onchainos-client.js  # OnchainOS CLI wrapper
 ├── skills/
-│   └── leigent-portfolio-skill/   # OpenClaw-compatible skill
-│       └── SKILL.md
+│   └── leigent-portfolio-skill/
+│       └── SKILL.md          # OpenClaw skill file
 ├── scripts/
 │   └── demo-swap.js          # Demo swap script
 ├── docs/
-│   └── architecture.md
 ├── package.json
 └── README.md
 ```
 
-## X Layer Network Info
+## 🔧 Quick Start
+
+```bash
+git clone https://github.com/leigents/leigent-portfolio-agent.git
+cd leigent-portfolio-agent
+npm install
+
+# Configure (ensure ~/.config/onchainos.env has OKX_API_KEY etc.)
+export WALLET_ADDRESS=0xYourXLayerAddress
+
+# Run
+node src/index.js
+```
+
+## 📊 X Layer Network
 
 | Parameter | Value |
 |-----------|-------|
 | Chain ID | 196 |
-| RPC | https://rpc.xlayer.tech |
-| Explorer | https://web3.okx.com/explorer/x-layer |
+| RPC | `https://rpc.xlayer.tech` |
+| Explorer | `https://web3.okx.com/explorer/x-layer` |
 | Gas token | OKB |
 | Avg tx fee | ~$0.0005 |
 | Block time | ~1s |
-| Native swap routing | OKB ↔ USDC ↔ USDT ↔ WOKB |
 
-## OnchainOS Commands Used
+### X Layer Token Addresses
 
-| Command | Purpose |
-|---------|---------|
-| `onchainos swap quote` | Get best swap route + price |
-| `onchainos swap execute` | Execute swap end-to-end |
-| `onchainos wallet balance` | Query wallet token balances |
-| `onchainos defi positions` | Get DeFi lending/staking positions |
-| `onchainos token search` | Find token contract addresses |
-| `onchainos security token-scan` | Verify token safety |
+| Token | Contract | Decimals |
+|-------|----------|----------|
+| USDC | `0x74b7f16337b8972027f6196a17a631ac6de26d22` | 6 |
+| USDT | `0x779ded0c9e1022225f8e0630b35a9b54be713736` | 6 |
+| WOKB | `0xe538905cf8410324e03a5a23c1c177a474d59b2b` | 18 |
+| OKB (native) | `0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee` | 18 |
+| XLAYER_USDT | `0x1e4a5963abfd975d8c9021ce480b42188849d41d` | 6 |
 
-## Strategy Examples
+## 🌐 Live Demo
 
-### Stable Income (3-8% APY)
-- 50% USDC (lending/LP)
-- 30% USDT (secondary stable)
-- 20% OKB (validator staking)
+**Agent:** Leigent (Moltbook: `@leigent`)
+**Wallet:** `0xd1b3c96f1854791eb01f84c43b1bf4949264a75d` (X Layer)
+**Repo:** https://github.com/leigents/leigent-portfolio-agent
 
-### Balanced Growth (8-20% APY)
-- 30% USDC (stable)
-- 40% OKB (growth)
-- 20% ETH (Ethereum exposure)
-- 10% USDT (reserve)
+## 📋 Submission
 
-### Aggressive Growth (20-100%+ APY)
-- 60% OKB (max exposure)
-- 20% ETH (altcoin exposure)
-- 20% USDC (war chest for dips)
+**Moltbook:** `m/buildx` — ProjectSubmission XLayerArena
+**GitHub:** https://github.com/leigents/leigent-portfolio-agent
+**Hackathon:** OKX Build X Hackathon 2026 | $14,000 USDT Prize Pool
 
-## License
+## 📜 License
 
 MIT
