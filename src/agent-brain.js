@@ -1,8 +1,11 @@
 /**
- * Agent Brain — Natural Language Understanding & Response Generation
+ * Agent Brain — Natural Language Understanding, Strategy Engine, and Memory
  * 
- * Uses keyword + pattern matching to classify user intent
- * and generate intelligent portfolio responses.
+ * Capabilities:
+ * - Multi-round conversation context tracking
+ * - User preference learning
+ * - Financial strategy matching
+ * - x402 payment and OKB staking awareness
  */
 
 class AgentBrain {
@@ -10,219 +13,340 @@ class AgentBrain {
     this.strategies = {
       income: {
         name: 'Stable Income',
-        description: 'Focus on yield-generating assets like USDC/USDT liquidity provision, lending, or staking OKB for validator rewards.',
         risk: 'Low',
         expectedYield: '3-8% APY',
-        allocation: { USDC: 50, USDT: 30, OKB: 20 },
-      },
-      growth: {
-        name: 'Aggressive Growth',
-        description: 'Higher exposure to OKB and emerging tokens with compounding potential. Higher risk but higher reward.',
-        risk: 'High',
-        expectedYield: '20-100%+ APY',
-        allocation: { OKB: 60, ETH: 20, USDC: 20 },
+        description: 'Focus on stablecoins (USDC/USDT) for lending yield + OKB staking rewards.',
+        allocations: { USDC: 50, USDT: 30, OKB: 20 },
+        rationale: 'Stablecoins provide low-volatility lending yield on X Layer DEX. OKB staking adds 5-10% APY. Combined target: 3-8% APY with minimal impermanent loss risk.',
       },
       balanced: {
         name: 'Balanced Growth',
-        description: 'Mix of stable assets (50%) and growth assets (50%). Good for medium-term holds.',
         risk: 'Medium',
         expectedYield: '8-20% APY',
-        allocation: { USDC: 30, OKB: 40, ETH: 20, USDT: 10 },
+        description: '50/50 split between stable income and growth assets.',
+        allocations: { USDC: 25, OKB: 45, USDT: 15, ETH: 15 },
+        rationale: 'Majority in OKB for staking + growth. Quarter in stablecoins for safety. Small ETH position for Ethereum ecosystem exposure.',
+      },
+      growth: {
+        name: 'Aggressive Growth',
+        risk: 'High',
+        expectedYield: '20-100%+ APY',
+        description: 'Maximum OKB exposure with war chest for tactical opportunities.',
+        allocations: { OKB: 60, ETH: 20, USDC: 15, USDT: 5 },
+        rationale: 'OKB is X Layer\'s native asset with validator staking yield AND capital appreciation potential. ETH provides diversification. 20% stable reserve for buying dips.',
       },
       safety: {
         name: 'Capital Preservation',
-        description: 'Almost entirely in stablecoins to protect principal. Minimal risk, low yield.',
         risk: 'Very Low',
         expectedYield: '2-5% APY',
-        allocation: { USDC: 70, USDT: 30 },
+        description: '100% stablecoin, minimal OKB for gas only.',
+        allocations: { USDC: 70, USDT: 30 },
+        rationale: 'Maximum protection of principal. Earn base lending yield on X Layer. Only keep 0.1 OKB for gas coverage.',
       },
     };
+
+    // Learned user preferences (built up over conversation)
+    this.preferenceMemory = {};
   }
 
-  /**
-   * Classify user message into intent types
-   */
-  async understand(message) {
-    const msg = message.toLowerCase();
+  // ── Intent Classification ─────────────────────────────────────────────────
 
-    // ── Status queries ────────────────────────────────────────────────────
-    if (this.match(msg, ['portfolio', 'balance', 'worth', 'value', '持仓', '资产', '多少钱'])) {
+  async understand(message, conversationHistory = []) {
+    const msg = message.toLowerCase();
+    const recent = conversationHistory.slice(-4); // last 4 turns for context
+
+    // ── Preference learning ──────────────────────────────────────────────
+    if (this.match(msg, ['i prefer', 'i like', 'i want low risk', 'i am aggressive', '不要太冒险', '我很保守'])) {
+      return {
+        type: 'learn_preference',
+        preference: this.extractPreference(msg),
+      };
+    }
+
+    // ── Status ───────────────────────────────────────────────────────────
+    if (this.match(msg, ['portfolio', 'balance', 'worth', 'value', '持仓', '资产', '多少钱', '狀況', 'status', 'how am i'])) {
       return { type: 'status' };
     }
 
-    // ── Goal: Income ──────────────────────────────────────────────────────
-    if (this.match(msg, ['income', 'yield', 'stable', 'steady', '利息', '收益', '稳定收入', '赚利息'])) {
-      return { type: 'goal_income', params: this.extractAmount(msg) };
+    // ── OKB Staking ─────────────────────────────────────────────────────
+    if (this.match(msg, ['stake', 'staking', '质押', '抵押', ' stake', 'validator', 'earn on okb'])) {
+      return {
+        type: 'stake_okb',
+        amount: this.extractAmount(msg) || '1',
+      };
     }
 
-    // ── Goal: Growth ──────────────────────────────────────────────────────
-    if (this.match(msg, ['grow', 'growth', 'increase', 'multiply', '堆仓', '增长', '放大', '激进'])) {
-      return { type: 'goal_growth', params: this.extractAmount(msg) };
+    // ── x402 Payment ─────────────────────────────────────────────────────
+    if (this.match(msg, ['x402', 'pay for', 'http 402', 'payment', '付费', 'api payment'])) {
+      return {
+        type: 'x402_payment',
+        url: this.extractUrl(msg) || 'https://api.xlayer.io/data',
+        amount: this.extractAmount(msg) || '0.01',
+      };
     }
 
-    // ── Goal: Safety ──────────────────────────────────────────────────────
-    if (this.match(msg, ['safe', 'security', 'preserve', 'protect', '安全', '保守', '保本'])) {
-      return { type: 'goal_safety', params: this.extractAmount(msg) };
+    // ── Income ───────────────────────────────────────────────────────────
+    if (this.match(msg, ['income', 'yield', 'stable', 'steady', '利息', '收益', '稳定', '赚利息', 'passive'])) {
+      const execute = this.match(msg, ['execute', 'start', 'begin', '执行', '开始', 'do it']);
+      return { type: 'goal_income', params: { strategy: 'income', execute } };
+    }
+
+    // ── Growth ───────────────────────────────────────────────────────────
+    if (this.match(msg, ['grow', 'growth', 'increase', 'multiply', '堆仓', '增长', '放大', '激进', 'aggressive', 'maximum'])) {
+      const execute = this.match(msg, ['execute', 'start', 'begin', '执行']);
+      return { type: 'goal_growth', params: { strategy: 'growth', execute } };
+    }
+
+    // ── Safety ───────────────────────────────────────────────────────────
+    if (this.match(msg, ['safe', 'safety', 'preserve', 'protect', '安全', '保守', '保本', 'low risk'])) {
+      const execute = this.match(msg, ['execute', 'start', 'begin', '执行']);
+      return { type: 'goal_safety', params: { strategy: 'safety', execute } };
+    }
+
+    // ── Balanced ──────────────────────────────────────────────────────────
+    if (this.match(msg, ['balanced', '平衡', '中等风险', 'medium risk'])) {
+      const execute = this.match(msg, ['execute', 'start', 'begin']);
+      return { type: 'goal_balanced', params: { strategy: 'balanced', execute } };
     }
 
     // ── Rebalance ─────────────────────────────────────────────────────────
-    if (this.match(msg, ['rebalance', '调整', '再平衡', '分配'])) {
+    if (this.match(msg, ['rebalance', '调整', '再平衡', '重新分配', 'allocate'])) {
       const allocations = this.extractAllocations(msg);
       return { type: 'rebalance', targetAllocations: allocations };
     }
 
     // ── Swap ──────────────────────────────────────────────────────────────
-    if (this.match(msg, ['swap', 'exchange', 'convert', '换', '兑换', '买', '卖'])) {
-      const swapParams = this.extractSwapParams(msg);
-      return { type: 'swap', params: swapParams };
+    if (this.match(msg, ['swap', 'exchange', 'convert', '换', '兑换', '买', '卖', 'trade'])) {
+      return {
+        type: 'swap',
+        params: this.extractSwapParams(msg),
+      };
     }
 
-    // ── Question ──────────────────────────────────────────────────────────
-    if (this.match(msg, ['what', 'how', 'why', 'should', 'can i', 'which', '什么', '怎么', '如何', '为什么', '我应该'])) {
+    // ── Comparison / Question ─────────────────────────────────────────────
+    if (this.match(msg, ['which is better', 'okb or', 'compare', '哪个好', 'what should i', 'recommend', '建议'])) {
       return { type: 'question', raw: message };
+    }
+
+    // ── Help ──────────────────────────────────────────────────────────────
+    if (this.match(msg, ['help', 'what can you do', '你能做什么', '怎么用'])) {
+      return { type: 'help' };
     }
 
     return { type: 'unknown' };
   }
 
-  /**
-   * Generate a portfolio status description
-   */
-  async describePortfolio(positions, balances) {
+  // ── Strategy Suggestions ──────────────────────────────────────────────────
+
+  suggestIncomeStrategy(params, userPrefs = {}) {
+    const s = this.strategies.income;
+    return {
+      name: s.name,
+      description: `💰 **${s.name} Strategy**
+      
+${s.description}
+
+**Risk:** ${s.risk} | **Expected yield:** ${s.expectedYield}
+
+**Target allocation:**
+${Object.entries(s.allocations).map(([k, v]) => `  • ${v}% ${k}`).join('\n')}
+
+**Why this works on X Layer:**
+${s.rationale}
+
+${params?.execute ? '' : '\nSay **"execute this strategy"** to begin.'}`,
+      allocations: s.allocations,
+    };
+  }
+
+  suggestGrowthStrategy(params, userPrefs = {}) {
+    const s = this.strategies.growth;
+    return {
+      name: s.name,
+      description: `🚀 **${s.name} Strategy**
+      
+${s.description}
+
+**Risk:** ${s.risk} | **Expected yield:** ${s.expectedYield}
+
+**Target allocation:**
+${Object.entries(s.allocations).map(([k, v]) => `  • ${v}% ${k}`).join('\n')}
+
+**Why this works on X Layer:**
+${s.rationale}
+
+⚠️ **Only invest what you can afford to lose.**
+
+${params?.execute ? '' : '\nSay **"execute this strategy"** to begin.'}`,
+      allocations: s.allocations,
+    };
+  }
+
+  suggestSafetyStrategy(params, userPrefs = {}) {
+    const s = this.strategies.safety;
+    return {
+      name: s.name,
+      description: `🛡️ **${s.name} Strategy**
+      
+${s.description}
+
+**Risk:** ${s.risk} | **Expected yield:** ${s.expectedYield}
+
+**Target allocation:**
+${Object.entries(s.allocations).map(([k, v]) => `  • ${v}% ${k}`).join('\n')}
+
+**Why this works on X Layer:**
+${s.rationale}
+
+${params?.execute ? '' : '\nSay **"execute this strategy"** to begin.'}`,
+      allocations: s.allocations,
+    };
+  }
+
+  // ── Portfolio Description ─────────────────────────────────────────────────
+
+  async describePortfolio(positions, balances, stakingYield = null) {
     const totalValue = parseFloat(balances.totalValueUsd || 0);
-    
+
     if (totalValue === 0) {
-      return `Your portfolio is empty (${balances.totalValueUsd || '$0.00'}).\n\nTo get started:\n• Deposit USDC or USDT to your wallet\n• Say "I want to invest $100 in stable income" to begin\n\nYour X Layer wallet: \`${balances.walletAddress || 'unknown'}\``;
+      return `📭 **Portfolio is empty** (${balances.totalValueUsd || '$0.00'} total)
+
+Your X Layer wallet: \`${balances.walletAddress || 'unknown'}\`
+
+**Getting started options:**
+• "I want stable income" → Deploy into USDC/USDT lending + OKB staking
+• "Swap 10 USDC to OKB" → Make your first swap
+• "Stake my OKB" → Earn ~5-10% APY on OKB validator rewards
+
+I'll walk you through each step.`;
     }
 
-    const lines = [`📊 **Portfolio Value: $${totalValue.toFixed(2)}**\n`];
+    const lines = [`📊 **Portfolio: $${totalValue.toFixed(2)}**\n`];
     lines.push('| Asset | Balance | Value |');
     lines.push('|-------|---------|-------|');
     
-    for (const asset of balances.assets || []) {
-      const name = asset.tokenSymbol || asset.tokenContractAddress?.slice(0, 8) || '?';
-      const bal = parseFloat(asset.balance || 0).toFixed(4);
-      const val = parseFloat(asset.valueUsd || 0).toFixed(2);
-      lines.push(`| ${name} | ${bal} | $${val} |`);
+    for (const asset of (balances.assets || []).slice(0, 8)) {
+      const sym = asset.tokenSymbol || '?';
+      const bal = parseFloat(asset.balance || 0);
+      const val = parseFloat(asset.valueUsd || 0);
+      const pct = totalValue > 0 ? ((val / totalValue) * 100).toFixed(1) : '0';
+      lines.push(`| ${sym} | ${bal.toFixed(4)} | $${val.toFixed(2)} (${pct}%) |`);
     }
 
-    if (positions.length > 0) {
-      lines.push(`\n🏦 **DeFi Positions:** ${positions.length}`);
-      for (const pos of positions.slice(0, 3)) {
-        lines.push(`  • ${pos.platform || 'Unknown'}: $${parseFloat(pos.valueUsd || 0).toFixed(2)}`);
-      }
+    if (stakingYield) {
+      lines.push(`\n🏦 **OKB Staking:** ${stakingYield.staked || '?'} OKB @ ${stakingYield.annualYield || '~7.5% APY'}`);
     }
+
+    if (balances.walletAddress) {
+      lines.push(`\n🔗 Wallet: \`${balances.walletAddress}\``);
+    }
+
+    lines.push('\n**Quick actions:** "Swap X to Y" | "Stake my OKB" | "I want [income/growth/safety]"');
 
     return lines.join('\n');
   }
 
-  /**
-   * Suggest an income strategy
-   */
-  suggestIncomeStrategy(positions, balances, params = {}) {
-    const strategy = this.strategies.income;
-    return `💰 **Stable Income Strategy**
-    
-${strategy.description}
+  // ── Q&A ─────────────────────────────────────────────────────────────────
 
-**Expected yield:** ${strategy.expectedYield}
-**Risk level:** ${strategy.risk}
-
-**Suggested allocation:**
-${Object.entries(strategy.allocation).map(([k, v]) => `  • ${v}% ${k}`).join('\n')}
-
-To execute this strategy, I would:
-1. Move 50% → USDC (lending/stablecoin LP on X Layer DEX)
-2. Move 30% → USDT (secondary stable)  
-3. Move 20% → OKB (staking or validator rewards)
-
-Say **"execute this strategy"** to begin.`;
-  }
-
-  /**
-   * Suggest a growth strategy
-   */
-  suggestGrowthStrategy(positions, balances, params = {}) {
-    const strategy = this.strategies.growth;
-    return `🚀 **Aggressive Growth Strategy**
-    
-${strategy.description}
-
-**Expected yield:** ${strategy.expectedYield}
-**Risk level:** ${strategy.risk}
-
-**Suggested allocation:**
-${Object.entries(strategy.allocation).map(([k, v]) => `  • ${v}% ${k}`).join('\n')}
-
-⚠️ **Warning:** This strategy carries high risk. Only invest what you can afford to lose.
-
-To execute this strategy, I would:
-1. Swap 60% → OKB (high conviction, exchange gas token)
-2. Monitor X Layer emerging DeFi opportunities
-3. Keep 20% in ETH for Ethereum ecosystem exposure
-
-Say **"execute this strategy"** to begin.`;
-  }
-
-  /**
-   * Suggest a safety strategy
-   */
-  suggestSafetyStrategy(positions, balances, params = {}) {
-    const strategy = this.strategies.safety;
-    return `🛡️ **Capital Preservation Strategy**
-    
-${strategy.description}
-
-**Expected yield:** ${strategy.expectedYield}
-**Risk level:** ${strategy.risk}
-
-**Suggested allocation:**
-${Object.entries(strategy.allocation).map(([k, v]) => `  • ${v}% ${k}`).join('\n')}
-
-This strategy minimizes volatility by staying in stablecoins.
-
-To execute this strategy, I would:
-1. Convert all assets → USDC/USDT
-2. Provide liquidity on X Layer OKX DEX for yield
-3. Keep minimal OKB (<5%) for gas fee coverage
-
-Say **"execute this strategy"** to begin.`;
-  }
-
-  /**
-   * Answer free-form questions
-   */
   async answerQuestion(question, positions, balances) {
     const q = question.toLowerCase();
-    
+    const totalValue = parseFloat(balances.totalValueUsd || 0);
+
     if (q.includes('better') || q.includes('哪个好') || q.includes('recommend')) {
-      return `Based on current X Layer conditions:
+      return `**OKB vs USDC** — it depends on your goal:
 
-**OKB** — Best for growth. It's the native gas token with staking yield (~5-10% APY from validators). High utility on X Layer.
+• **OKB** — Best for growth + yield. Native X Layer gas token with ~5-10% APY from validator staking. Higher risk, higher utility.
 
-**USDC/USDT** — Best for stability. Most liquid stablecoins on X Layer. Good for earning yield without volatility.
+• **USDC** — Best for stability. Most liquid stablecoin on X Layer. Low risk, earning base lending yield (~2-4%).
 
-**My recommendation:** A 40/40/20 split (OKB/USDC/ETH) gives you growth potential with downside protection.`;
+**My recommendation for you:** Given X Layer's near-zero gas fees (~$0.0005/tx), you don't need much OKB for gas. A good starting split:
+• 40% OKB (growth + staking yield)
+• 40% USDC (stable income)
+• 20% ETH (exposure + ecosystem bridge)`;
     }
 
     if (q.includes('gas') || q.includes('fee') || q.includes('手续费')) {
-      return `X Layer gas fees are extremely low:
-• Average: **~$0.0005 per transaction**
-• Swap: ~$0.001-0.01 depending on complexity
-• Native x402 payments can cover fees with token rewards
+      return `**X Layer fees are exceptionally low:**
+• Average swap: **$0.001-0.01** (vs Ethereum's $2-10)
+• Native transfer: **~$0.0005**
+• x402 payments: pay-per-request, metered
 
-Compare this to Ethereum mainnet ($2-10+) or even Arbitrum ($0.10-0.50).`;
+This makes frequent rebalancing and small-position strategies economically viable for the first time.`;
     }
 
-    return `Good question! I don't have a specific answer for "${question}" yet, but I'm learning.
+    if (q.includes('okb staking') || q.includes('质押') || q.includes('stake')) {
+      return `**OKB Staking on X Layer:**
 
-For now, I can help you with:
-• Checking your portfolio balance and positions
-• Recommending strategy based on your goals
-• Executing token swaps on X Layer
-• Auto-rebalancing when allocations drift
+• **APY:** ~5-10% from validator rewards (paid in OKB)
+• **Lock:** Flexible (no lock-up on some validators)
+• **How:** Swap to OKB, then stake via OKX Earn or on-chain staking contract
+• **Gas:** ~$0.0005 (trivial)
 
-Try: "What's my portfolio worth?" or "I want stable income"`;
+Say **"stake my OKB"** and I'll walk you through it.`;
+    }
+
+    if (q.includes('x402') || q.includes('402')) {
+      return `**x402 is X Layer's native payment protocol:**
+
+• Enables **metered API access** — pay per request, not per month
+• Uses **HTTP 402** (Payment Required) response
+• Supports **any token** via automatic DEX swap
+• Built into OnchainOS at the protocol level
+
+Real-world use: Pay for premium data APIs, AI model queries, or premium DeFi data — all in one transaction flow.
+
+Say **"pay for [API URL]"** to try it.`;
+    }
+
+    if (q.includes('what can you do') || q.includes('你能做什么')) {
+      return `**Leigent can help you:**
+
+💰 **Portfolio management**
+• "What's my portfolio worth?"
+• "Show my positions"
+
+📈 **Strategies**
+• "I want stable income" / "I want growth" / "Keep it safe"
+• "Stake my OKB for yield"
+
+🔄 **Trading**
+• "Swap 10 USDC to OKB"
+• "Rebalance to 60% OKB, 40% USDC"
+
+💳 **Payments**
+• "Pay for [API URL] via x402"
+
+🛡️ **Security**
+• "Scan this token for safety"
+
+Everything executes on X Layer with near-zero gas fees.`;
+    }
+
+    return `I don't have a specific answer for "${question}" yet — I'm always learning.
+
+Try asking:
+• "What's my portfolio worth?"
+• "What's better, OKB or USDC?"
+• "How does x402 work?"
+• "Stake my OKB"`;
+  }
+
+  // ── Learning ──────────────────────────────────────────────────────────────
+
+  learnFromFeedback(message, preference) {
+    Object.assign(this.preferenceMemory, preference);
+  }
+
+  extractPreference(msg) {
+    const pref = {};
+    if (msg.includes('low risk') || msg.includes('safe') || msg.includes('保守') || msg.includes('保本')) {
+      pref.riskTolerance = 'low';
+    } else if (msg.includes('high risk') || msg.includes('aggressive') || msg.includes('激进')) {
+      pref.riskTolerance = 'high';
+    } else if (msg.includes('medium') || msg.includes('中等')) {
+      pref.riskTolerance = 'medium';
+    }
+    return pref;
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -232,31 +356,35 @@ Try: "What's my portfolio worth?" or "I want stable income"`;
   }
 
   extractAmount(msg) {
-    // Simple regex for dollar amounts
-    const match = msg.match(/\$?(\d+(?:\.\d+)?)/);
-    return match ? parseFloat(match[1]) : null;
+    const match = msg.match(/\$?([\d,]+\.?\d*)/);
+    return match ? match[1].replace(',', '') : null;
   }
 
   extractSwapParams(msg) {
-    // "swap 10 USDC to OKB" → { fromToken: 'USDC', amount: '10000000', toToken: 'OKB' }
-    const match = msg.match(/(\d+(?:\.\d+)?)\s*(?:USDC|USDT|OKB|ETH|WOKB)/i);
-    const tokens = msg.match(/(USDC|USDT|OKB|ETH|WOKB)/gi) || [];
+    const numMatch = msg.match(/(\d+(?:\.\d+)?)/);
+    const amount = numMatch ? numMatch[1] : '1';
+    const tokens = msg.match(/(?:to |-> |- )?(USDC|USDT|OKB|WOKB|ETH|WETH)(?:\s|$|,)/gi) || [];
+    const uniqueTokens = [...new Set(tokens.map(t => t.toUpperCase().replace(/[^A-Z]/g, '')))];
     
     return {
-      fromToken: tokens[0]?.toUpperCase() || 'USDC',
-      toToken: tokens[1]?.toUpperCase() || 'OKB',
-      amount: match ? match[1] : '1',
+      fromToken: uniqueTokens[0] || 'USDC',
+      toToken: uniqueTokens[1] || 'OKB',
+      amount,
     };
   }
 
   extractAllocations(msg) {
-    // "rebalance to 60% OKB, 40% USDC" → { OKB: 60, USDC: 40 }
     const alloc = {};
-    const matches = msg.matchAll(/(\d+)\s*%\s*(USDC|USDT|OKB|ETH|WOKB)/gi);
+    const matches = msg.matchAll(/(\d+)\s*%?\s*(?:percent?\s+)?(USDC|USDT|OKB|WOKB|ETH|WETH)/gi);
     for (const [, pct, token] of matches) {
       alloc[token.toUpperCase()] = parseInt(pct);
     }
     return alloc;
+  }
+
+  extractUrl(msg) {
+    const match = msg.match(/https?:\/\/[^\s]+/);
+    return match ? match[0] : null;
   }
 }
 
